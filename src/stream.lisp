@@ -36,8 +36,12 @@
         do (sleep 0.01) )
   (stream-read-byte-no-hang stream) )
 
-(defmethod stream-write-char ((stream dump-stream) c)
-  (declare (type character c))
+(defmethod stream-write-char ((stream dump-stream) (c character))
+  (unless (dump-stream-ignoring-char-p stream c)
+    (dump-stream-write-char stream c)))
+
+(defun dump-stream-write-char (stream c)
+  (declare (type stream dump-stream) (type character c))
   (with-slots (context outbound-buffer outbound-buffer-length) stream
     (multiple-value-bind (value length)
         (ecase (dump-stream-context-from context)

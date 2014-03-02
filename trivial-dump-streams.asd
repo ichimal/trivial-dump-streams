@@ -19,6 +19,7 @@
       :components ((:file :packages)
                    (:file :conditions)
                    (:file :context)
+                   (:file :filter)
                    (:file :converter)
                    (:file :stream) ))))
 

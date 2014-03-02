@@ -1,9 +1,10 @@
 .hg*
 .??*.sw?
 *.sw?
+*.cl
 *.fas
 *.fasl
 *.diff
 *.patch
 tags
-
+TODO*

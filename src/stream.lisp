@@ -17,11 +17,13 @@
                :inbound-bits inbound-bits
                :outbound-bits outbound-bits )))
 
-(defmethod stream-read-byte-lookahead ((stream dump-stream))
+#+clisp
+(defmethod gray:stream-read-byte-lookahead ((stream dump-stream))
   (with-slots (outbound-buffer) stream
     (plusp (qsize outbound-buffer)) ))
 
-(defmethod stream-read-byte-no-hang ((stream dump-stream))
+#+clisp
+(defmethod gray:stream-read-byte-no-hang ((stream dump-stream))
   (with-slots (outbound-buffer) stream
     (qpop outbound-buffer) ))
 

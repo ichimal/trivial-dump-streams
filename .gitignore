@@ -1,0 +1,8 @@
+.??*.sw?
+*.sw?
+*.fas
+*.fasl
+*.diff
+*.patch
+tags
+

@@ -5,8 +5,9 @@
                        fundamental-character-input-stream
                        fundamental-character-output-stream )
   ((context :initarg :context :initform (error "required :context"))
-   (outbound-buffer :initform nil)
-   (outbound-buffer-length :initform 0) ))
+   (outbound-buffer :initform (make-queue :simple-queue))
+   (temporary-buffer :initform 0)
+   (temporary-buffer-length :initform 0) ))
 
 (defun make-dump-stream (from to &key inbound-bits outbound-bits )
   (make-instance 'dump-stream
@@ -17,19 +18,12 @@
                :outbound-bits outbound-bits )))
 
 (defmethod stream-read-byte-lookahead ((stream dump-stream))
-  (with-slots (context outbound-buffer outbound-buffer-length) stream
-    (let ((outbound-bits (dump-stream-context-outbound-bits context)))
-      (and outbound-buffer (>= outbound-buffer-length outbound-bits)) )))
+  (with-slots (outbound-buffer) stream
+    (plusp (qsize outbound-buffer)) ))
 
 (defmethod stream-read-byte-no-hang ((stream dump-stream))
-  (with-slots (context outbound-buffer outbound-buffer-length) stream
-    (let ((outbound-bits (dump-stream-context-outbound-bits context)))
-      (let ((value (ldb (byte outbound-bits 0) outbound-buffer)))
-        (decf outbound-buffer-length outbound-bits)
-        (if (zerop outbound-buffer-length)
-          (setf outbound-buffer nil)
-          (setf outbound-buffer (ash outbound-buffer (- outbound-bits))) )
-        value ))))
+  (with-slots (outbound-buffer) stream
+    (qpop outbound-buffer) ))
 
 (defmethod stream-read-byte ((stream dump-stream))
   (loop until (stream-read-byte-lookahead stream)
@@ -52,11 +46,29 @@
             (error (make-condition 'invalid-char
                                    :character c
                                    :accepted-character-class :binary ))))
-      (if (null outbound-buffer)
-        (setf outbound-buffer value
-              outbound-buffer-length length )
-        (psetf outbound-buffer (dpb value
-                                   (byte length outbound-buffer-length)
-                                   outbound-buffer )
-               outbound-buffer-length (+ outbound-buffer-length length) )))))
+      (update-internal-buffer stream value length) )))
+
+(defun update-internal-buffer (stream value length)
+  (declare (type dump-stream stream)
+           (type unsigned-byte value length) )
+  (with-slots (context outbound-buffer
+               temporary-buffer temporary-buffer-length )
+              stream
+    ;; phase 1: merge temporary buffer
+    (let* ((total-length (+ temporary-buffer-length length))
+           (merged-buffer
+             (logand (dpb temporary-buffer
+                          (byte temporary-buffer-length length)
+                          value )
+                     (1- (ash 1 total-length)) ))
+           (unit-length (dump-stream-context-outbound-bits context)) )
+      ;; phase 2: split merged buffer into the outbound queue
+      (loop with current-length = total-length
+            while (>= current-length unit-length)
+            do (decf current-length unit-length)
+               (qpush outbound-buffer (ash merged-buffer (- current-length)))
+               (setf merged-buffer
+                     (logand merged-buffer (1- (ash 1 current-length))))
+            finally (setf temporary-buffer-length current-length
+                          temporary-buffer merged-buffer) ))))
 

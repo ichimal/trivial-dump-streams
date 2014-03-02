@@ -12,7 +12,7 @@
   :author "SUZUKI Shingo"
   :licence "MIT"
   :description "converts dump string and binary mutually"
-  :depends-on (:trivial-gray-streams)
+  :depends-on (:trivial-gray-streams :queues.simple-queue)
   :components
     ((:module :src
       :serial t

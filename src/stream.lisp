@@ -33,7 +33,7 @@
 
 (defmethod stream-read-byte ((stream dump-stream))
   (loop until (stream-read-byte-lookahead stream)
-        do (sleep 0.01) )
+        do (sleep 0.001) )
   (stream-read-byte-no-hang stream) )
 
 (defmethod stream-write-char ((stream dump-stream) (c character))
